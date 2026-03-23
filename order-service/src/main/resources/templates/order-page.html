@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Service 화면</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; }
+        h1 { margin-bottom: 16px; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        input { padding: 8px; margin: 4px 8px 4px 0; }
+        button { padding: 8px 12px; margin-right: 8px; cursor: pointer; }
+        table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f5f5f5; }
+        .row-actions button { padding: 6px 10px; }
+    </style>
+</head>
+<body>
+<h1>주문 관리 화면 (Order Service)</h1>
+
+<div class="card">
+    <h3>주문 등록</h3>
+    <label for="userId">사용자 ID</label>
+    <input id="userId" placeholder="1" type="number">
+    <label for="productName">상품명</label>
+    <input id="productName" placeholder="키보드" type="text">
+    <label for="quantity">수량</label>
+    <input id="quantity" placeholder="1" type="number">
+    <button onclick="createOrder()">등록</button>
+</div>
+
+<div class="card">
+    <h3>주문 목록</h3>
+    <button onclick="loadOrders()">새로고침</button>
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>사용자 ID</th>
+            <th>상품명</th>
+            <th>수량</th>
+            <th>기능</th>
+        </tr>
+        </thead>
+        <tbody id="orderTableBody"></tbody>
+    </table>
+</div>
+
+<script th:inline="javascript">
+    const orderApi = '/orders';
+
+    async function loadOrders() {
+        const response = await fetch(orderApi);
+        const orders = await response.json();
+        const tbody = document.getElementById('orderTableBody');
+        tbody.innerHTML = '';
+
+        orders.forEach(order => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${order.id}</td>
+                <td><input id="userId-${order.id}" value="${order.userId}" type="number" /></td>
+                <td><input id="productName-${order.id}" value="${order.productName}" /></td>
+                <td><input id="quantity-${order.id}" value="${order.quantity}" type="number" /></td>
+                <td class="row-actions">
+                    <button onclick="updateOrder(${order.id})">수정</button>
+                    <button onclick="deleteOrder(${order.id})">삭제</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function createOrder() {
+        const userId = Number(document.getElementById('userId').value);
+        const productName = document.getElementById('productName').value;
+        const quantity = Number(document.getElementById('quantity').value);
+
+        const response = await fetch(orderApi, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, productName, quantity })
+        });
+
+        if (!response.ok) {
+            alert('등록 실패');
+            return;
+        }
+
+        document.getElementById('userId').value = '';
+        document.getElementById('productName').value = '';
+        document.getElementById('quantity').value = '';
+        await loadOrders();
+    }
+
+    async function updateOrder(id) {
+        const userId = Number(document.getElementById(`userId-${id}`).value);
+        const productName = document.getElementById(`productName-${id}`).value;
+        const quantity = Number(document.getElementById(`quantity-${id}`).value);
+
+        const response = await fetch(`${orderApi}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, productName, quantity })
+        });
+
+        if (!response.ok) {
+            alert('수정 실패');
+            return;
+        }
+        await loadOrders();
+    }
+
+    async function deleteOrder(id) {
+        const response = await fetch(`${orderApi}/${id}`, { method: 'DELETE' });
+        if (!response.ok) {
+            alert('삭제 실패');
+            return;
+        }
+        await loadOrders();
+    }
+
+    loadOrders();
+</script>
+</body>
+</html>
